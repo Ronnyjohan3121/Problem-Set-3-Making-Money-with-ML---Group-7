@@ -3,7 +3,7 @@ Problem Set 3: Making Money with ML - Group 7 - Applied Economics - Group 7
 
 We are working on this repository from the course Big Data - Machine Learning - Applied Economics - Department of Economics Universidad de los Andes - main tutor Ignacio Barbieri - The development is carried out by students Catalina Esmeral, Juan Camilo Sanchez, Federico R, Ronny Johan Cruz - Group 7
 
-# CONTENT
+# Content
 
 In the repository structure we will find
 
@@ -20,8 +20,8 @@ Pi = f(ci1,ci2,...,cin)
 
 # Some general reminders: 
 
-It is essential how you write up the document. Be sure to be organized and consistent in explaining your equations and findings. Make sure that there are no compilation errors.
-
-Write understandable code, separating and commenting on each section. Coding, like in writing, style is critical for readability. If the code is well written, it should be self-contained. There is no need to write everything you did. I encourage you to follow the tidyverse style guide
+- It is essential how you write up the document. Be sure to be organized and consistent in explaining your equations and findings. Make sure that there are no compilation errors.
+ 
+- Write understandable code, separating and commenting on each section. Coding, like in writing, style is critical for readability. If the code is well written, it should be self-contained. There is no need to write everything you did. I encourage you to follow the [tidyverse style guide](https://style.tidyverse.org/)
 
 
