@@ -18,6 +18,8 @@ In the case of a house, these characteristics may include structural attributes 
 
 Pi = f(ci1,ci2,...,cin)
 
+An important recommendation to solve the workshop is to take into account the instructions https://github.com/ignaciomsarmiento/PS_Repo.git that will help us structure a suitable workshop on GitHub
+
 # Some general reminders: 
 
 - It is essential how you write up the document. Be sure to be organized and consistent in explaining your equations and findings. Make sure that there are no compilation errors.
