@@ -9,7 +9,7 @@ In the repository structure we will find
 
 The main objective is to create a predictive model, which gives us an optimal result, in deciding and buying the best properties in the Chapinero neighborhood of Bogota with the lowest possible budget.
 
-One of the inputs of information that we will use to develop the workshop and propose the model will be from the following network address https://www. propertyati.com.co.
+One of the inputs of information that we will use to develop the workshop and propose the model will be from the following network address https://www.propertyati.com.co.
 
 Within the proposed solution, that is; In the predictive model, we must consider that the database or information input has missing data, so we will propose some strategy that will help us complement this missing information, additionally we must be careful in overestimating the data, so that this does not lead to lead to an economic loss that has consequences on the organizational structure of the company
 
