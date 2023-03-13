@@ -7,11 +7,11 @@ We are working on this repository from the course Big Data - Machine Learning - 
 
 In the repository structure we will find
 
-The main objective is to create a predictive model, which gives us an optimal result, in deciding and buying the best properties in the Chapinero neighborhood of Bogota with the lowest possible budget.
+The main objective is to create a predictive model, which gives us an optimal result, in deciding and buying the best properties in the Chapinero neighborhood of Bogota  - Colombia with the lowest possible budget.
 
 One of the inputs of information that we will use to develop the workshop and propose the model will be from the following network address https://www.propertyati.com.co.
 
-Within the proposed solution, that is; In the predictive model, we must consider that the database or information input has missing data, so we will propose some strategy that will help us complement this missing information, additionally we must be careful in overestimating the data, so that this does not lead to lead to an economic loss that has consequences on the organizational structure of the company
+Within the proposed solution, that is; In the predictive model, we must consider that the database or information input has missing data, so we will propose some strategy that will help us complement this missing information, additionally we must be careful in overestimating the data, so that this doesn´t lead to lead to an economic loss that has consequences on the organizational structure of the company
 
 The main objective is to construct a predictive model of asking prices. From Rosen’s landmark paper ”Hedonic Prices and Implicit Markets: Product Differentiation in Pure Competition” (1974), we know that a vector of its characteristics, C = (c1, c2, . . . , cn), describes a differentiated good.
 In the case of a house, these characteristics may include structural attributes (e.g., number of bedrooms), neighborhood public services (e.g., local school quality), and local amenities (e.g., crime, air quality, etc). Thus, we can write the market price of the house as:
@@ -19,6 +19,8 @@ In the case of a house, these characteristics may include structural attributes 
 Pi = f(ci1,ci2,...,cin)
 
 An important recommendation to solve the workshop is to take into account the instructions https://github.com/ignaciomsarmiento/PS_Repo.git that will help us structure a suitable workshop on GitHub
+
+A recommendation in R scripts is to make the necessary order and form comments. Something even more important is to see and verify the replicability of the code, at this point we must confirm the computer resources, the speed it takes to run the models will depend on the characteristics of the equipment used
 
 # Some general reminders: 
 
