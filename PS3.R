@@ -537,3 +537,359 @@ get_descriptives("bog")
 get_descriptives("chap")
 
 ##Preparing for regressions
+
+
+houses_train <- houses_train %>% mutate(
+  price = as.numeric(scale(price)),
+  estrato = floor(estrato)
+)
+
+data2 <- na.omit(houses_train)
+data2 <- data2 %>% mutate(
+  across(
+    c(
+      city,
+      house,
+      sala_com,
+      upgrade_in,
+      upgrade_out,
+      garage,
+      light,
+      estrato
+    ),
+    as.factor
+  )
+)
+
+
+data_test_f <- data_test %>% mutate(
+  estrato = floor(estrato)
+)
+
+data_test_f <- data_test_f %>% mutate(
+  across(
+    c(
+      city,
+      house,
+      sala_com,
+      upgrade_in,
+      upgrade_out,
+      garage,
+      light,
+      estrato
+    ),
+    as.factor
+  )
+)
+
+
+# # Selector de muestra!!!
+# set.seed(10)
+# data <- data %>%
+#     slice_sample(prop = 0.5)
+
+data2<- st_drop_geometry(data2)
+
+predictors2 <- data2 %>%
+  select(-price) %>%
+  names()
+p_load("caret")
+set.seed(666)
+train_index <- createDataPartition(data2$price, p = .8)$Resample1
+train_boost <- data2[train_index,]
+test_boost <- data2[-train_index,]
+
+# Creamos las particiones para hacer validación cruzada
+cv5 <- trainControl(number = 5, method = "cv")
+cv3 <- trainControl(number = 3, method = "cv")
+
+#Random Forest
+# Creamos una grilla para tunear el random forest
+tunegrid_rf <- expand.grid(mtry = c(3, 5, 10), 
+                           min.node.size = c(10, 30, 50,
+                                             70, 100),
+                           splitrule = "variance"
+                            )
+p_load("parallel")
+n_cores <- detectCores()
+print(paste("Mi PC tiene", n_cores, "nucleos"))
+
+p_load("doParallel")
+cl <- makePSOCKcluster(n_cores - 5) 
+registerDoParallel(cl)
+
+
+
+modelorf <- train(price ~ surface_total+bedrooms + bathrooms +house+sala_com+upgrade_in +upgrade_out+garage+light+
+                   estrato+less_500m_fuel+closest_fuel+less_500m_hospital+closest_hospital+less_500m_police+closest_police+
+                   less_500m_park+closest_park+less_500m_river+closest_river+less_500m_university+closest_university+less_500m_station+
+                   closest_station+less_500m_supermarket+closest_supermarket+less_500m_mall+closest_mall,
+                 data = train_boost, 
+                 method = "ranger", 
+                 trControl = cv5,
+                 metric = 'RMSE', 
+                 tuneGrid = tunegrid_rf)
+
+summary(modelorf)
+p_load("ranger")
+var_importance_rf <- importance(modelorf)
+
+
+y_hat_insample_rf = predict(modelorf, newdata = train_boost)
+y_hat_outsamplerf = predict(modelorf, newdata = test_boost)
+
+MAE(y_hat_insample_rf,train_boost$price)
+
+MAE(y_hat_outsamplerf,test_boost$price)
+
+
+
+
+precio_pred_rf = predict(modelorf, newdata = data_test_f)
+mean_orig <- mean(houses_train$price)
+sd_orig <- sd(houses_train$price)
+
+
+predic_orig_rf = precio_pred_rf * sd_orig + mean_orig
+test_rf <- cbind(data_test_f, predic_orig_rf)
+
+# Crear data frame con variables property_id y predic_orig_rf
+pred_rf <- data.frame(property_id = test_rf$property_id, price = predic_orig_rf)
+
+# Renombrar columna predic_orig_rf como price
+names(pred_rf)[2] <- "price"
+
+# Guardar data frame en un archivo csv
+write.csv(pred_rf, "pred_rf.csv", row.names = FALSE)
+
+
+
+write.csv(pred_rf, file = "pred_rf.csv")
+
+#XGB
+
+tunegrid_xgb <- expand.grid(
+  nrounds = c(50, 100, 150),
+  max_depth = c(3, 6, 9),
+  eta = c(0.01, 0.05, 0.1),
+  gamma = c(0, 1, 5),
+  colsample_bytree = seq(0.1, 1, 0.1),
+  min_child_weight = c(1, 3, 5),
+  subsample = seq(0.5, 1, 0.1)
+)
+
+library(xgboost)
+model_xgb <- train(price ~ surface_total + bedrooms + bathrooms + less_500m_hospital + less_500m_police +
+                     less_500m_park + less_500m_river + less_500m_university +
+                     less_500m_supermarket + less_500m_mall,
+  data = train_boost,
+  method = "xgbTree",
+  trControl = cv5,
+  metric = 'RMSE',
+  tuneGrid = tunegrid_xgb,
+  verbose = FALSE,
+  nthread = 1 # para evitar problemas con el paralelismo
+)
+
+y_hat_insample_xgb = predict(modelxgb, newdata = train_boost)
+y_hat_outsample_xgb = predict(model_xgb, newdata = test_boost)
+
+MAE(y_hat_insample_xgb,train_boost$price)
+
+MAE(y_hat_outsample_xgb,test_boost$price)
+
+
+
+
+precio_pred_xgb = predict(model_xgb, newdata = data_test_f)
+mean_orig <- mean(houses_train$price)
+sd_orig <- sd(houses_train$price)
+
+
+predic_orig_xgb = precio_pred_xgb * sd_orig + mean_orig
+test_xgb <- cbind(data_test_f, predic_orig_xgb)
+
+# Crear data frame con variables property_id y predic_orig_rf
+pred_xgb <- data.frame(property_id = test_xgb$property_id, price = predic_orig_xgb)
+
+# Renombrar columna predic_orig_rf como price
+names(pred_xgb)[2] <- "price"
+
+# Guardar data frame en un archivo csv
+write.csv(pred_xgb, "pred_xgb.csv", row.names = FALSE)
+
+
+
+write.csv(pred_xgb, file = "pred_xgb.csv")
+
+####
+
+
+######
+
+lm_model <- train(price ~ surface_total + bedrooms + bathrooms + less_500m_hospital + less_500m_police +
+                    less_500m_park + less_500m_river + less_500m_university +
+                    less_500m_supermarket + less_500m_mall, data = train_boost, method = "lm", trControl = cv5, metric = "RMSE")
+
+y_hat_insample_lm = predict(lm_model, newdata = train_boost)
+y_hat_outsample_lm = predict(lm_model, newdata = test_boost)
+
+MAE(y_hat_insample_lm,train_boost$price)
+
+MAE(y_hat_outsample_lm,test_boost$price)
+
+
+
+
+precio_pred_lm = predict(lm_model, newdata = data_test_f)
+mean_orig <- mean(houses_train$price)
+sd_orig <- sd(houses_train$price)
+
+
+predic_orig_lm = precio_pred_lm * sd_orig + mean_orig
+test_lm <- cbind(data_test_f, predic_orig_lm)
+
+# Crear data frame con variables property_id y predic_orig_rf
+pred_lm <- data.frame(property_id = test_lm$property_id, price = predic_orig_lm)
+
+# Renombrar columna predic_orig_rf como price
+names(pred_lm)[2] <- "price"
+
+# Guardar data frame en un archivo csv
+write.csv(pred_lm, "pred_lm.csv", row.names = FALSE)
+
+
+
+write.csv(pred_lm, file = "pred_lm.csv")
+
+
+######
+
+lasso_model <- train(price ~ surface_total + bedrooms + bathrooms + house + sala_com + upgrade_in +
+                       upgrade_out + garage + light + estrato + less_500m_fuel + closest_fuel + 
+                       less_500m_hospital + closest_hospital + less_500m_police + closest_police + 
+                       less_500m_park + closest_park + less_500m_river + closest_river + 
+                       less_500m_university + closest_university + less_500m_station + closest_station + 
+                       less_500m_supermarket + closest_supermarket + less_500m_mall + closest_mall, data = train_boost, method = "glmnet", trControl = cv5, 
+                     metric = "RMSE", tuneGrid = expand.grid(alpha = 1, lambda = seq(0, 1, by = 0.01)))
+
+y_hat_insample_lasso = predict(lasso_model, newdata = train_boost)
+y_hat_outsample_lasso = predict(lasso_model, newdata = test_boost)
+
+MAE(y_hat_insample_lasso,train_boost$price)
+
+MAE(y_hat_outsample_lasso,test_boost$price)
+
+
+
+
+precio_pred_lasso = predict(lasso_model, newdata = data_test_f)
+mean_orig <- mean(houses_train$price)
+sd_orig <- sd(houses_train$price)
+
+
+predic_orig_lasso = precio_pred_lasso * sd_orig + mean_orig
+test_lasso <- cbind(data_test_f, predic_orig_lasso)
+
+# Crear data frame con variables property_id y predic_orig_rf
+pred_lasso <- data.frame(property_id = test_lasso$property_id, price = predic_orig_lasso)
+
+# Renombrar columna predic_orig_rf como price
+names(pred_lasso)[2] <- "price"
+
+# Guardar data frame en un archivo csv
+write.csv(pred_lasso, "pred_lasso.csv", row.names = FALSE)
+
+
+
+write.csv(pred_lasso, file = "pred_lasso.csv")
+
+
+########
+
+ridge_model <- train(price ~ surface_total + bedrooms + bathrooms + house + sala_com + upgrade_in +
+                       upgrade_out + garage + light + estrato + less_500m_fuel + closest_fuel + 
+                       less_500m_hospital + closest_hospital + less_500m_police + closest_police + 
+                       less_500m_park + closest_park + less_500m_river + closest_river + 
+                       less_500m_university + closest_university + less_500m_station + closest_station + 
+                       less_500m_supermarket + closest_supermarket + less_500m_mall + closest_mall, data = train_boost, method = "glmnet", trControl = cv5, metric = "RMSE", tuneGrid = expand.grid(alpha = 0, lambda = seq(0, 1, by = 0.01)))
+
+
+
+
+y_hat_insample_ridge = predict(ridge_model, newdata = train_boost)
+y_hat_outsample_ridge = predict(ridge_model, newdata = test_boost)
+
+MAE(y_hat_insample_ridge,train_boost$price)
+
+MAE(y_hat_outsample_ridge,test_boost$price)
+
+
+
+
+precio_pred_ridge = predict(ridge_model, newdata = data_test_f)
+mean_orig <- mean(houses_train$price)
+sd_orig <- sd(houses_train$price)
+
+
+predic_orig_ridge = precio_pred_ridge * sd_orig + mean_orig
+test_ridge <- cbind(data_test_f, predic_orig_ridge)
+
+# Crear data frame con variables property_id y predic_orig_rf
+pred_ridge <- data.frame(property_id = test_ridge$property_id, price = predic_orig_ridge)
+
+# Renombrar columna predic_orig_rf como price
+names(pred_ridge)[2] <- "price"
+
+# Guardar data frame en un archivo csv
+write.csv(pred_ridge, "pred_ridge.csv", row.names = FALSE)
+
+
+
+write.csv(pred_ridge, file = "pred_ridge.csv")
+
+#########################################
+
+en_model <- train(price ~ surface_total + bedrooms + bathrooms + house + sala_com + upgrade_in +
+                       upgrade_out + garage + light + estrato + less_500m_fuel + closest_fuel + 
+                       less_500m_hospital + closest_hospital + less_500m_police + closest_police + 
+                       less_500m_park + closest_park + less_500m_river + closest_river + 
+                       less_500m_university + closest_university + less_500m_station + closest_station + 
+                       less_500m_supermarket + closest_supermarket + less_500m_mall + closest_mall, 
+                     data = train_boost, 
+                     method = "glmnet", 
+                     trControl = cv5, 
+                     metric = "RMSE", 
+                     tuneGrid = expand.grid(alpha = 0.5, lambda = seq(0, 1, by = 0.01)))
+
+y_hat_insample_en = predict(en_model, newdata = train_boost)
+y_hat_outsample_en = predict(en_model, newdata = test_boost)
+
+MAE(y_hat_insample_en,train_boost$price)
+
+MAE(y_hat_outsample_en,test_boost$price)
+
+
+
+
+precio_pred_en = predict(en_model, newdata = data_test_f)
+
+
+
+predic_orig_en = precio_pred_en * sd_orig + mean_orig
+test_en <- cbind(data_test_f, predic_orig_en)
+
+# Crear data frame con variables property_id y predic_orig_rf
+pred_en <- data.frame(property_id = test_en$property_id, price = predic_orig_en)
+
+# Renombrar columna predic_orig_rf como price
+names(pred_en)[2] <- "price"
+
+# Guardar data frame en un archivo csv
+write.csv(pred_en, "pred_en.csv", row.names = FALSE)
+
+
+
+write.csv(pred_ridge, file = "pred_ridge.csv")
+
+######
