@@ -5,11 +5,14 @@ Este repositorio corresponde al Problem Set 3 del curso Big Data y Machine Learn
 
 # Contenido
 
-En el repositorio se encontrarán
+In this repository you will find:
 
 The main objective is to create a predictive model, which gives us an optimal result, in deciding and buying the best properties in the Chapinero neighborhood of Bogota  - Colombia with the lowest possible budget.
 
-One of the inputs of information that we will use to develop the workshop and propose the model will be from the following network address https://www.propertyati.com.co.
+One of the inputs of information that we will use to develop the workshop and propose the models will be from the following address: https://www.propertyati.com.co. 2018 Colombian census data can be found at https://geoportal.dane.gov.co/servicios/descarga-y-metadatos/descarga-mgn-marco-geoestadistico-nacional/ and http://microdatos.dane.gov.co/index.php/catalog/643/get_microdata.
+
+-  The code used can be found in the file "PS3.R".
+-  Views contains graphs and tables that were used for descriptive analysis.
 
 Within the proposed solution, that is; In the predictive model, we must consider that the database or information input has missing data, so we will propose some strategy that will help us complement this missing information, additionally we must be careful in overestimating the data, so that this doesn´t lead to lead to an economic loss that has consequences on the organizational structure of the company
 
@@ -18,14 +21,8 @@ In the case of a house, these characteristics may include structural attributes 
 
 Pi = f(ci1,ci2,...,cin)
 
-An important recommendation to solve the workshop is to take into account the instructions https://github.com/ignaciomsarmiento/PS_Repo.git that will help us structure a suitable workshop on GitHub
-
-A recommendation in R scripts is to make the necessary order and form comments. Something even more important is to see and verify the replicability of the code, at this point we must confirm the computer resources, the speed it takes to run the models will depend on the characteristics of the equipment used
 
 # Some general reminders: 
 
-- It is essential how you write up the document. Be sure to be organized and consistent in explaining your equations and findings. Make sure that there are no compilation errors.
- 
-- Write understandable code, separating and commenting on each section. Coding, like in writing, style is critical for readability. If the code is well written, it should be self-contained. There is no need to write everything you did. I encourage you to follow the [tidyverse style guide](https://style.tidyverse.org/)
-
+-  The execution speed will depend on the specific characteristics of the computer you are using, so you might need to wait a couple minutes or even hours while it processes.
 
