@@ -329,3 +329,211 @@ mean_imputer <- function(df, neighbors) {
   }
   df
 }
+# Use the columns created by the two previous functions to fill missing values
+# in their original variables
+
+tidy_base <- function(df) {
+  df <- df %>%
+    mutate(
+      bathrooms = if_else(
+        bathrooms == 0 | is.na(bathrooms), imputed_bathrooms, bathrooms
+      ),
+      sala_com = if_else(
+        sala_com == 0 | is.na(sala_com), imputed_sala_com, sala_com
+      ),
+      upgrade_in = if_else(
+        upgrade_in == 0 | is.na(upgrade_in), imputed_upgrade_in, upgrade_in
+      ),
+      upgrade_out = if_else(
+        upgrade_out == 0 | is.na(upgrade_out), imputed_upgrade_out, upgrade_out
+      ),
+      garage = if_else(
+        garage == 0 | is.na(garage), imputed_garage, garage
+      ),
+      light = if_else(
+        light == 0 | is.na(light), imputed_light, light
+      ),
+      surface_total = if_else(
+        surface_total == 0 | is.na(surface_total), imputed_surface_total, surface_total
+      ),
+      estrato = if_else(
+        estrato == 0 | is.na(estrato), imputed_estrato, estrato
+      )
+    ) %>%
+    select(-starts_with("imputed"))
+  
+  df
+}
+
+
+# Use search perimeter of 150 meters to impute remaining missing values - train
+houses_train <- mode_imputer(houses_train, nei_train_150)
+houses_train <- mean_imputer(houses_train, nei_train_150)
+houses_train <- tidy_base(houses_train)
+
+saveRDS(houses_train, "C:/Users/juanc/OneDrive - Universidad Nacional de Colombia/Big data ML/ps3/imputed_train.Rds")
+
+
+# Use search perimeter of 150 meters to impute remaining missing values - test
+houses_test <- mode_imputer(houses_test, nei_test_150)
+houses_test <- mean_imputer(houses_test, nei_test_150)
+houses_test <- tidy_base(houses_test)
+
+saveRDS(houses_test, "C:/Users/juanc/OneDrive - Universidad Nacional de Colombia/Big data ML/ps3/imputed_test.Rds")
+
+# Get two values with respect of a geograpghic feature:
+# 1) Number of points of that kind within 500 meters from a specific house
+# 2) Distance to the closest point of that kind from a specific house
+vars_from_dist <- function(base, value) {
+  # Load set of polygons created by get_dist.R for a specific feature
+  path <- paste0("C:/Users/juanc/OneDrive - Universidad Nacional de Colombia/Big data ML/ps3/dist_", base, "_", value, ".Rds")
+  data <- readRDS(path)
+  # Create an empty dataframe to store vales of two variables
+  less_500m_name <- paste0("less_500m_", value)
+  closest_name <- paste0("closest_", value)
+  grouped_vars <- data.frame(numeric(nrow(data)), numeric(nrow(data)))
+  colnames(grouped_vars) <- c(less_500m_name, closest_name)
+  
+  for (i in seq_len(nrow(data))) { # For each house
+    # Get all distances from the house to the polygons that belong to a category
+    y <- data[i, ] %>% as.numeric()
+    # Count how many of those polygons are within 500 meters from the house
+    less_500m <- y[y < 500] %>% length()
+    # Determine the closest polygon
+    closest <- min(y)
+    # Associate retrieved values to the house being iterated on
+    grouped_vars[i, less_500m_name] <- less_500m
+    grouped_vars[i, closest_name] <- closest
+  }
+  grouped_vars
+}
+
+houses_train <- readRDS("C:/Users/juanc/OneDrive - Universidad Nacional de Colombia/Big data ML/ps3/imputed_train.Rds")
+houses_test <- readRDS("C:/Users/juanc/OneDrive - Universidad Nacional de Colombia/Big data ML/ps3/imputed_test.Rds")
+
+
+# Iterate through each key-value pair from the matrix of variables of interest
+# and find the values that were difined by the function vars_from_dist
+# for a given base
+append_dist_vars <- function(df, base) {
+  for (i in keyvals[, "value"]) {
+    vars <- vars_from_dist(base, i)
+    df <- cbind(df, vars)
+  }
+  df
+}
+
+houses_train <- append_dist_vars(houses_train, "train")
+saveRDS(houses_train, "C:/Users/juanc/OneDrive - Universidad Nacional de Colombia/Big data ML/ps3/dist_vars_imputed_train.Rds")
+houses_test <- append_dist_vars(houses_test, "test")
+saveRDS(houses_test, "C:/Users/juanc/OneDrive - Universidad Nacional de Colombia/Big data ML/ps3/dist_vars_imputed_test.Rds")
+
+houses_train <- readRDS("C:/Users/juanc/OneDrive - Universidad Nacional de Colombia/Big data ML/ps3/dist_vars_imputed_train.Rds")
+houses_test <- readRDS("C:/Users/juanc/OneDrive - Universidad Nacional de Colombia/Big data ML/ps3/dist_vars_imputed_test.Rds")
+
+data_train <- houses_train
+data_test <- houses_test
+
+###Limpieza de últimos NAs en test (cerca de 12-15 observaciones en algunas variables)
+median_surface_total <- median(data_test$surface_total, na.rm = TRUE)
+
+data_test$surface_total <- ifelse(is.na(data_test$surface_total), median_surface_total, data_test$surface_total)
+
+
+# Calcular la moda de un vector excluyendo los valores faltantes (NA)
+get_mode2 <- function(x){
+  x <- x[!is.na(x)]  # excluir los valores faltantes
+  tab <- table(x)  # contar la frecuencia de cada valor
+  tab_max <- tab[which.max(tab)]  # seleccionar la frecuencia máxima
+  mode_val <- as.numeric(names(tab)[tab == tab_max])  # seleccionar el valor correspondiente
+  return(mode_val)
+}
+
+# Crear una lista con los nombres de las columnas a modificar
+cols_to_impute <- c("bathrooms", "sala_com", "upgrade_in", "upgrade_out", "garage", "light", "estrato")
+
+# Iterar sobre las columnas y reemplazar los valores faltantes con la moda
+for(col in cols_to_impute){
+  mode_col <- get_mode2(data_test[[col]])
+  data_test[[col]] <- ifelse(is.na(data_test[[col]]), mode_col, data_test[[col]])
+}
+
+data_test <- st_drop_geometry(data_test)
+
+# Histograma log(precio)
+histo_precio_train <- ggplot(data_train, aes(x = log(price))) +
+  geom_histogram(bins = 50,color = "grey30", fill = "darkblue") +
+  ggtitle("Precio vivienda Bogotá") +
+  labs(x = "Log(precio vivienda)", y = "Cantidad") +
+  theme_bw()
+ggsave("C:/Users/juanc/OneDrive - Universidad Nacional de Colombia/Big data ML/ps3/Log_precio_train.png", histo_precio_train)
+
+
+# Histogrma área vivienda
+#data_bog <- data_bog%>% mutate_at (c ('surface_total'), ~ ( scale (.)%>% as.vector ))
+
+
+histo_area_train <- ggplot(data_train, aes(x = surface_total)) +
+  xlim(0, 500) +  geom_histogram(bins = 100,color = "gray30", fill = "green") +
+  ggtitle("Área vivienda Bogotá") + 
+  labs(x = "Metros cuadrados (M2)", y = "Cantidad") +
+  theme_bw()
+ggsave("C:/Users/juanc/OneDrive - Universidad Nacional de Colombia/Big data ML/ps3/area_train.png", histo_area_train)
+
+histo_area_test <- ggplot(data_test, aes(x = surface_total)) +
+  xlim(0, 500) + geom_histogram(bins = 100,color = "grey30", fill = "red") +
+  ggtitle("Área vivienda Chapinero") +
+  labs(x = "Metros cuadrados (M2)", y = "Cantidad") +
+  theme_bw()
+ggsave("C:/Users/juanc/OneDrive - Universidad Nacional de Colombia/Big data ML/ps3/area_test.png", histo_area_test)
+
+# Tablas descriptivas
+data_bog <- data_train[,!names(data_train) %in% c("property_id", "city")]
+data_chap <- data_test[,!names(data_test) %in% c("property_id", "city")]
+
+p_load(vtable)
+
+get_descriptives <- function(city){
+  if(city == "bog"){
+    data <- data_bog
+  }
+  
+  if(city == "chap"){
+    data <- data_chap
+  }
+  
+  data <- data %>% rename(
+    'area M2' = surface_total,
+    "Numero de habitaciones" = bedrooms,
+    "Numero de baños" = bathrooms,
+    "Distancia gasolinería mas cercana" =  closest_fuel,
+    "Distancia hospital mas cercano" = closest_hospital,
+    "Distancia estacion policia mas cercana" = closest_police,
+    "Distancia parque mas cercano" = closest_park,
+    "Distancia rio mas cercano" = closest_river,
+    "Distancia universidad mas cercana" = closest_university,
+    "Distancia estacion transporte mas cercana" = closest_station,
+    "Distancia supermercado mas cercano" = closest_supermarket,
+    "Distancia C.Comercial mas cercano" = closest_mall,
+    "Tipo de  vivienda (1 si es casa)" = house,
+    "Cuenta con sala o  comedor" = sala_com,
+    "Servicios interiores adicional" = upgrade_in,
+    "Servicios exteriores adicional" = upgrade_out,
+    "Luz natural" = light,
+    "Numero de gasolineras a 500 mts" = less_500m_fuel,
+    "Numero de hospitales a 500 mts" = less_500m_hospital,
+    "Numero de estaciones policia a 500 mts" = less_500m_police,
+    "Numero de parques a 500 mts" = less_500m_park,
+    "Numero de rios a 500 mts" = less_500m_river,
+    "Numero de universidades a 500 mts" = less_500m_university,
+    "Numero de estaciones transporte a 500 mts" = less_500m_station,
+    "Numero de Supermercado a 500 mts" = less_500m_supermarket,
+    "Numero de C.comercial a 500 mts" = less_500m_mall,
+  )
+  sumtable(data, out='latex',file= paste0("C:/Users/juanc/OneDrive - Universidad Nacional de Colombia/Big data ML/ps3/descriptive_", city, ".tex"))
+}
+
+get_descriptives("bog")
+get_descriptives("chap")
+
+##Preparing for regressions
