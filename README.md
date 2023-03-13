@@ -1,11 +1,11 @@
 # Problem - Set - 3 - Making - Money - with - ML - Group - 7
 Problem Set 3: Making Money with ML - Group 7 - Applied Economics - Group 7
 
-We are working on this repository from the course Big Data - Machine Learning - Applied Economics - Department of Economics Universidad de los Andes - main tutor Ignacio Barbieri - The development is carried out by students Catalina Esmeral, Juan Camilo Sanchez, Federico R, Ronny Johan Cruz - Group 7
+Este repositorio corresponde al Problem Set 3 del curso Big Data y Machine Learning para Economía Aplicada. En este ejercicio participaron Catalina Esmeral, Juan Camilo Sanchez, Federico Ramírez y Ronny Johan Cruz - Grupo 7
 
-# Content
+# Contenido
 
-In the repository structure we will find
+En el repositorio se encontrarán
 
 The main objective is to create a predictive model, which gives us an optimal result, in deciding and buying the best properties in the Chapinero neighborhood of Bogota  - Colombia with the lowest possible budget.
 
