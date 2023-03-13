@@ -188,3 +188,144 @@ p_load(tidyverse,rio,skimr,viridis,
 
 houses_train <- train_geo
 houses_test <- test_geo
+
+# obtener poligono 
+sf_use_s2(FALSE)
+
+select <- dplyr::select
+
+get_estrato <- function(base){
+  if(base == "train"){
+    houses <- houses_train
+    df <- getbb(place_name = "Bogota", featuretype = "", format_out = "sf_polygon") %>% .$multipolygon
+    mnz <- st_read("C:/Users/juanc/OneDrive - Universidad Nacional de Colombia/Big data ML/ps3/MGN2018_URB_MANZANA/MGN_URB_MANZANA.shp") %>% select(MANZ_CCNCT) %>% .[df,]
+    mgn <- import("C:/Users/juanc/OneDrive - Universidad Nacional de Colombia/Big data ML/ps3/11_Bogota_CSV/CNPV2018_MGN_A2_11.CSV")
+    viv <- import("C:/Users/juanc/OneDrive - Universidad Nacional de Colombia/Big data ML/ps3/11_Bogota_CSV/CNPV2018_1VIV_A2_11.CSV")
+  }
+  
+  if(base == "test"){
+    houses <- houses_test
+    df <- getbb(place_name = "Bogota", featuretype = "", format_out = "sf_polygon") %>% .$multipolygon
+    mnz <- st_read("C:/Users/juanc/OneDrive - Universidad Nacional de Colombia/Big data ML/ps3/MGN2018_URB_MANZANA/MGN_URB_MANZANA.shp") %>% select(MANZ_CCNCT) %>% .[df,]
+    mgn <- import("C:/Users/juanc/OneDrive - Universidad Nacional de Colombia/Big data ML/ps3/11_Bogota_CSV/CNPV2018_MGN_A2_11.CSV")
+    viv <- import("C:/Users/juanc/OneDrive - Universidad Nacional de Colombia/Big data ML/ps3/11_Bogota_CSV/CNPV2018_1VIV_A2_11.CSV")
+  }
+  
+  ### Unir datos imputados con manzanas DANE
+  houses <- st_join(x=houses , y=mnz)
+  
+  
+  ### Crear data estratos
+  ## data manzanas
+  mgn <- mgn %>% select(COD_DANE_ANM,UA_CLASE,COD_ENCUESTAS,U_VIVIENDA)
+  
+  ## data vivienda
+  viv <- viv %>% select(COD_ENCUESTAS,UA_CLASE,U_VIVIENDA,V_TOT_HOG,VA1_ESTRATO)
+  
+  ## joing mnz-hogar-vivienda
+  viv_mgn <- left_join(viv, mgn, by=c("UA_CLASE","COD_ENCUESTAS","U_VIVIENDA"))
+  
+  ##=== collapse data ===##
+  db <- viv_mgn %>%
+    group_by(COD_DANE_ANM) %>% 
+    summarise(med_VA1_ESTRATO=median(VA1_ESTRATO,na.rm=T))
+  
+  
+  ### UNir estratos hogar por manzana
+  
+  houses <- left_join(houses,db,by=c("MANZ_CCNCT"="COD_DANE_ANM"))
+  
+  estrato <- houses %>% select(property_id, med_VA1_ESTRATO)
+  estrato <- st_drop_geometry(estrato)
+  path_exp <- paste0("C:/Users/juanc/OneDrive - Universidad Nacional de Colombia/Big data ML/ps3/estrato_", base, ".rds")
+  export(estrato, path_exp)
+}
+
+get_estrato("train")
+get_estrato("test")
+
+get_mode <- function(x) { # Create mode function
+  unique_x <- unique(x)
+  tabulate_x <- tabulate(match(x, unique_x))
+  if (length(tabulate_x) > 1) {
+    unique_x <- na.omit(unique(x))
+    tabulate_x <- tabulate(match(x, unique_x))
+    modes <- unique_x[tabulate_x == max(tabulate_x)]
+    if (length(modes > 1)) {
+      set.seed(10)
+      modes <- sample(modes, size = 1)
+      return(modes)
+    } else {
+      return(modes)
+    }
+  } else {
+    return(unique_x[tabulate_x == max(tabulate_x)])
+  }
+}
+
+#estratos
+
+estrato_train <- readRDS("C:/Users/juanc/OneDrive - Universidad Nacional de Colombia/Big data ML/ps3/estrato_train.rds")
+estrato_test <- readRDS("C:/Users/juanc/OneDrive - Universidad Nacional de Colombia/Big data ML/ps3/estrato_test.rds")
+
+
+houses_train <- houses_train %>% left_join(estrato_train, by = "property_id")
+houses_test <- houses_test %>% left_join(estrato_test, by = "property_id")
+
+
+houses_train <- houses_train %>% dplyr::rename(estrato = med_VA1_ESTRATO)
+houses_test <- houses_test %>% dplyr::rename(estrato = med_VA1_ESTRATO)
+
+
+nei_train_150 <- readRDS("C:/Users/juanc/OneDrive - Universidad Nacional de Colombia/Big data ML/ps3/nei_train_150.Rds")
+nei_test_150 <- readRDS("C:/Users/juanc/OneDrive - Universidad Nacional de Colombia/Big data ML/ps3/nei_test_150.Rds")
+
+# Impute values using custom mode function that retrieves most repeated values
+# in a vecinity
+mode_imputer <- function(df, neighbors) {
+  # Variables that have values to be imputed
+  vars_to_impute <- c(
+    "bathrooms",
+    "sala_com",
+    "upgrade_in",
+    "upgrade_out",
+    "garage",
+    "light",
+    "estrato"
+  )
+  
+  for (variable in vars_to_impute) {
+    # Create empty column to fill with imputed values
+    imputed_var <- paste0("imputed_", variable)
+    df[, imputed_var] <- numeric(nrow(df))
+    
+    for (value in seq_len(nrow(df))) { # For each property in the newly created column
+      # Get indices for its neighbors
+      values_neighbors <- df[neighbors[[value]], variable][[1]]
+      # Apply custom mode function on the currently iterated variable and set of neighbors
+      imputed <- get_mode(values_neighbors)
+      # Impute the obtained mode to the currently iterated property
+      df[value, imputed_var] <- imputed
+    }
+  }
+  df
+}
+
+
+# Repeat same algorithm as in mode_imputer, but using mean instead of mode
+mean_imputer <- function(df, neighbors) {
+  vars_to_impute <- c("surface_total")
+  for (variable in vars_to_impute) {
+    imputed_var <- paste0("imputed_", variable)
+    df[, imputed_var] <- numeric(nrow(df))
+    for (value in seq_len(nrow(df))) {
+      values_neighbors <- df[neighbors[[value]], variable][[1]]
+      imputed <- mean(values_neighbors, na.rm = TRUE)
+      if (is.nan(imputed)) {
+        imputed <- NA
+      }
+      df[value, imputed_var] <- imputed
+    }
+  }
+  df
+}
