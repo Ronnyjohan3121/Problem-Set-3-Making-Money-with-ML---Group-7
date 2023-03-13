@@ -3,7 +3,7 @@ Problem Set 3: Making Money with ML - Group 7 - Applied Economics - Group 7
 
 Este repositorio corresponde al Problem Set 3 del curso Big Data y Machine Learning para Economía Aplicada. En este ejercicio participaron Catalina Esmeral, Juan Camilo Sanchez, Federico Ramírez y Ronny Johan Cruz - Grupo 7
 
-# Contenido
+# Content
 
 In this repository you will find:
 
