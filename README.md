@@ -1,7 +1,7 @@
 # Problem - Set - 3 - Making - Money - with - ML - Group - 7
 Problem Set 3: Making Money with ML - Group 7 - Applied Economics - Group 7
 
-We are working on this repository from the course Big Data - Machine Learning - Applied Economics - Department of Economics Universidad de los Andes - main tutor Ignacio Sarmmiento Barbieri - The development is carried out by students Catalina Esmeral, Juan Camilo Sanchez, Federico Ramírez, Ronny Johan Cruz - Group 77
+We are working on this repository from the course Big Data - Machine Learning - Applied Economics - Department of Economics Universidad de los Andes - main tutor Ignacio Sarmmiento Barbieri - The development is carried out by students Catalina Esmeral, Juan Camilo Sanchez, Federico Ramírez, Ronny Johan Cruz - Group 7
 
 # Content
 
